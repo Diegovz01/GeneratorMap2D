@@ -374,7 +374,7 @@ public class Metodos
     /// <Param name="aspereza">La probabilidad de que cambie de ancho en cada paso en el Y</param>
     /// <param name="desplazamientoMaximo">La cantidad máxima que podemos cambiar el punto central del túnel</param>
     /// <param name="desplazamiento">La probabilidad de que cambie el punto central del túnel</param>
-    /// <returns></returns>
+    /// <returns>El mapa con el tunel direccional generado.</returns>
     public static int[,] TunelDireccional(int[,] mapa, float semilla, int anchoMinimo, int anchoMaximo, float aspereza, int desplazamientoMaximo, float desplazamiento)
     {
         // Este valor va desde su valor en negativo hasta el valor positivo,
@@ -408,14 +408,181 @@ public class Metodos
             }
 
             // Comprobamos si cambiamos la posición central del túnel
-            if(Random.value < desplazamiento)
+            if (Random.value < desplazamiento)
             {
                 // Elegimos aleatoriamente el desplazamiento del túnel.
-                int cambioEnX = Random.Range( -desplazamientoMaximo, desplazamientoMaximo);
+                int cambioEnX = Random.Range(-desplazamientoMaximo, desplazamientoMaximo);
                 x += cambioEnX;
 
                 // Nos aseguramos de que el túnel no se salga del mapa.
                 x = Mathf.Clamp(x, anchoMaximo + 1, mapa.GetUpperBound(0) - anchoMaximo);
+            }
+        }
+        return mapa;
+    }
+
+    /// <summary>
+    /// Crea la base para las funciones avanzadas de automatas celulares
+    /// Usaremos este mapa en distintas funciones dependiendo del tipo de vecindario que queremos
+    /// </summary>
+    /// <param name="ancho">Ancho del mapa.</param>
+    /// <param name="alto">Alto del mapa.</param>
+    /// <param name="semilla">La semilla de los números aleatorios.</param>
+    /// <param name="porcentajeDeRelleno">La cantidad que queremos que se llene el mapa. Valor entre [0,1].</param>
+    /// <param name="losBordesSonMuros">Si los bordes deben mantenerse.</param>   
+    /// <returns>El con el contenido aleatorio</returns>
+    public static int[,] GenerarMapaAleatorio(int ancho, int alto, float semilla, float porcentajeDeRelleno, bool losBordesSonMuros)
+    {
+        // La semilla de nuestro random.
+        Random.InitState(semilla.GetHashCode());
+
+        // Creamos el array.
+        int[,] mapa = new int[ancho, alto];
+
+        // Recorremos todas las posiciones del mapa.
+        for (int x = 0; x <= mapa.GetUpperBound(0); x++)
+        {
+            for (int y = 0; y <= mapa.GetUpperBound(1); y++)
+            {
+                if(losBordesSonMuros && (x == 0 || x == mapa.GetUpperBound(0) || y == 0 || y == mapa.GetUpperBound(1))){
+                    // Ponemos suelo si estamos en una posición del borde.
+                    mapa[x, y] = 1;
+                }
+                else
+                {
+                 // Ponemos suelo si el resultado del random es inferior que el porcentaje de relleno.
+                mapa[x, y] = (Random.value < porcentajeDeRelleno) ? 1 : 0;                   
+                }
+            }
+        }
+        return mapa;
+    }
+
+    /// <summary>
+    /// Calcula el total de losetas vecinas
+    /// </summary>
+    /// <param name="mapa">Al mapa donde comprobar las losetas.</param>
+    /// <param name="x">La posición en X de la loseta que estamos comprobando.</param>
+    /// <param name="y">La posición en Y de la loseta que estamos comprobando.</param>
+    /// <param name="incluirDiagonales">Si hay que tener en cuenta las posiciones vecinas en diagonal.</param>
+    /// <returns>El total de losetas vecinas con suelo.</returns>
+    public static int CantidadLosetasVecinas(int[,] mapa, int x, int y, bool incluirDiagonales)
+    {
+        // Lleva la cuenta de losteas vecinas
+        int totalLosetas = 0;
+
+        // Recorrer todas las posiciones vecinas.
+        for(int vecinoX = x-1; vecinoX <= x+1; vecinoX++)
+        {
+            for(int vecinoY = y-1; vecinoY <= y+1; vecinoY++)
+            {
+                // Comprobamos que estamos dentro del mapa.
+                if(vecinoX >= 0 && vecinoX <= mapa.GetUpperBound(0) && vecinoY >= 0 && vecinoY <= mapa.GetUpperBound(1))
+                {
+                    // Comprobamos que no estemos en la misma posición x, y que estamos comprobando.
+                    // y si incluirDiagonales = false:
+                    //
+                    //   N
+                    // N T N
+                    //   N
+                    //
+                    // Si incluirDiagonales = true:
+                    //
+                    // N N N
+                    // N T N
+                    // N N N
+                    //
+                    if((vecinoX != x || vecinoY != y) && ( incluirDiagonales || (vecinoX == x || vecinoY == y)))
+                    {
+                        totalLosetas += mapa[vecinoX, vecinoY];
+                    }
+                }
+            }
+        }
+        return totalLosetas;
+    }
+
+    /// <summary>
+    /// Suaviza un mapa usando las reglas de vecindario de Moore.
+    /// Se tienen en cuenta todas las losetas vecinas (incluidas las diagonales)
+    /// </summary>
+    /// <param name="mapa">El mapa a suavizar.</param>
+    /// <param name="totalDePasadas">La cantidad de pasadas que haremos.</param>
+    /// <param name="losBordesSonMuros">Si se deben mantener los bordes.</param>
+    /// <returns>El mapa modificado.</returns>
+    public static int[,] AutomataCelularMoore(int[,] mapa, int totalDePasadas, bool losBordesSonMuros)
+    {
+        for (int i = 0; i < totalDePasadas; i++)
+        {
+            for (int x = 0; x <= mapa.GetUpperBound(0); x++)
+            {
+                for (int y = 0; y <= mapa.GetUpperBound(1); y++)
+                {
+                    // Obtenemos el total de losetas vecinas (Incluyendo las diagonales)
+                    int losetasVecinas = CantidadLosetasVecinas(mapa, x, y, true);
+
+                    // Si estamos en un borde y losBordesSonMuros está activado,
+                    // ponemos un muro
+                    if(losBordesSonMuros && (x == 0 || x == mapa.GetUpperBound(0) || y == 0 || y == mapa.GetUpperBound(1)))
+                    {
+                        mapa[x, y] = 1;
+                    }
+
+                    // Si tenemos mas de 4 vecinos, ponemos suelo.
+                    else if(losetasVecinas > 4)
+                    {
+                        mapa[x, y] = 1;
+                    }
+                    // Si tenemos menos de 4 vecinos, dejamos un hueco.
+                    else if(losetasVecinas < 4)
+                    {
+                        mapa[x, y] = 0;
+                    }
+                    // Si tenemos exactamente 4 vecinos, no cambiamos nada.
+                }
+            }
+        }
+        return mapa;
+    }
+
+    /// <summary>
+    /// Suaviza un mapa usando las reglas de vecindario de Von Neumann.
+    /// No se tienen en cuenta las losetas vecinas en diagonal
+    /// </summary>
+    /// <param name="mapa">El mapa a suavizar.</param>
+    /// <param name="totalDePasadas">La cantidad de pasadas que haremos.</param>
+    /// <param name="losBordesSonMuros">Si se deben mantener los bordes.</param>
+    /// <returns>El mapa modificado.</returns>
+    public static int[,] AutomataCelularVonNeumann(int[,] mapa, int totalDePasadas, bool losBordesSonMuros)
+    {
+        for (int i = 0; i < totalDePasadas; i++)
+        {
+            for (int x = 0; x <= mapa.GetUpperBound(0); x++)
+            {
+                for (int y = 0; y <= mapa.GetUpperBound(1); y++)
+                {
+                    // Obtenemos el total de losetas vecinas (Incluyendo las diagonales)
+                    int losetasVecinas = CantidadLosetasVecinas(mapa, x, y, false);
+
+                    // Si estamos en un borde y losBordesSonMuros está activado,
+                    // ponemos un muro
+                    if(losBordesSonMuros && (x == 0 || x == mapa.GetUpperBound(0) || y == 0 || y == mapa.GetUpperBound(1)))
+                    {
+                        mapa[x, y] = 1;
+                    }
+
+                    // Si tenemos mas de 2 vecinos, ponemos suelo.
+                    else if(losetasVecinas > 2)
+                    {
+                        mapa[x, y] = 1;
+                    }
+                    // Si tenemos menos de 2 vecinos, dejamos un hueco.
+                    else if(losetasVecinas < 2)
+                    {
+                        mapa[x, y] = 0;
+                    }
+                    // Si tenemos exactamente 2 vecinos, no cambiamos nada.
+                }
             }
         }
         return mapa;

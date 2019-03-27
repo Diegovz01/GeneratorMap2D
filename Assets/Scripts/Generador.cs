@@ -6,11 +6,12 @@ using UnityEngine.Tilemaps;
 public enum Algoritmo
 {
     PerlinNoise, PerlinNoiseSuavizado, RandomWalk, RandomWalkSueavizado,
-    PerlinNoiseCueva, RandomWalkCueva, TunelDireccional
+    PerlinNoiseCueva, RandomWalkCueva, TunelDireccional, MapaAleatorio,
+    AutomataCelularMoore, AutomataCelularVonNeumann
 }
 public class Generador : MonoBehaviour
 {
-    /* 
+    /* Ejemplo
     public bool propiedadDelObjeto;
     private void Start()
     {
@@ -68,10 +69,24 @@ public class Generador : MonoBehaviour
     public int DesplazamientoMaximo = 2;
     [Range(0, 1)]
     public float Aspereza = 0.75f;
+    [Range(0, 1)]
     public float Desplazamiento = 0.75f;
+
+    [Header("Autómata celular")]
+    [Range(0, 1)]
+    public float PorcentajeDeRelleno = 0.45f;
+    public int TotalDePasadas = 3;
 
     public void GenerarMapa()
     {
+        /*
+        int[,] temporal = new int[,] { {1, 1, 0},
+                                        {1, 1, 1},
+                                        {1, 0, 1} };
+
+        Debug.Log(Metodos.CantidadLosetasVecinas(temporal, 1, 1, true));
+        */    
+
         // Limpiamos el mapa de losetas.
         MapaDeLosetas.ClearAllTiles();
 
@@ -119,6 +134,17 @@ public class Generador : MonoBehaviour
             case Algoritmo.TunelDireccional:
                 mapa = Metodos.GenerarArray(Ancho, Alto, false);
                 mapa = Metodos.TunelDireccional(mapa, Semilla, AnchoMinimo, AnchoMaximo, Aspereza, DesplazamientoMaximo, Desplazamiento);
+                break;
+            case Algoritmo.MapaAleatorio:
+                mapa = Metodos.GenerarMapaAleatorio(Ancho, Alto, Semilla, PorcentajeDeRelleno, LosBordesSonMuros);
+                break;
+            case Algoritmo.AutomataCelularMoore:
+                mapa = Metodos.GenerarMapaAleatorio(Ancho, Alto, Semilla, PorcentajeDeRelleno, LosBordesSonMuros);
+                mapa = Metodos.AutomataCelularMoore(mapa, TotalDePasadas, LosBordesSonMuros);
+                break;
+            case Algoritmo.AutomataCelularVonNeumann:
+                mapa = Metodos.GenerarMapaAleatorio(Ancho, Alto, Semilla, PorcentajeDeRelleno, LosBordesSonMuros);
+                mapa = Metodos.AutomataCelularVonNeumann(mapa, TotalDePasadas, LosBordesSonMuros);
                 break;
         }
 
