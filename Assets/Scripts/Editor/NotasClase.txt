@@ -1,0 +1,25 @@
+GetHashCode();
+Cambia de float a un valor entero.
+
+GetUpperBound();
+devuelve el tamaño del array.
+
+Random.InitState();
+Inicializa el estado del generador de números aleatorios con una 
+semilla.
+
+Parámetros:
+
+Semilla: semilla utilizada para inicializar el generador de 
+números aleatorios.
+
+Random.value => Nos devuelve un valor random de 0 a 1.
+
+Escribir las mayusculas del metodo
+
+// Multi Cursor
+alt + click cursor
+
+// Barra superior
+
+control + shift + p
